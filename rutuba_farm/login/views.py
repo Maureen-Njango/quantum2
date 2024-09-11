@@ -52,4 +52,4 @@ def index(request):
         },
     )
 
-def register
+# def register

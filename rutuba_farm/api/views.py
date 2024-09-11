@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from django.contrib.auth.hashers import make_password
 
 # Create your views here.
 from django.contrib.auth.models import User
@@ -34,7 +35,9 @@ class UsersListView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        serializer = UsersSerializer(data=request.data)
+        data = request.data.copy()
+        data['password'] = make_password(data['password'])
+        serializer = UsersSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -64,7 +67,17 @@ class UsersDetailView(APIView):
 
 class LoginView(APIView):
     def post(self, request):
-     return Response({'successfuly logged in'}, status=status.HTTP_200_OK)
+        username = request.data.get('username')
+        password = request.data.get('password')
+        user = authenticate(username=username, password=password)
+        if user is not None:
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'access':str(refresh.access_token),
+                'refresh':str(refresh)
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({'error': f'invalid credentials. Username: {username}, Password: {password}'}, status=status.HTTP_401_UNAUTHORIZED)
    
 
 @csrf_exempt
